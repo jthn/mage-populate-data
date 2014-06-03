@@ -3,14 +3,14 @@ require_once 'app/Mage.php';
 require_once 'populate.php';
 Mage::app();
 
-set_time_limit(5);
+set_time_limit(15);
 $customer = Builder::create_customer();
 Builder::create_sale($customer);
 Mage::log($argv[1] . ' sales created' . PHP_EOL);
 
 exit(0);
 
-class Builder 
+class Builder
 {
 	public static function create_customer()
 	{
@@ -118,6 +118,22 @@ class Builder
 		$cart->getItems()->clear()->save();
 		/* Logout the customer you created */
 		Mage::getSingleton('customer/session')->logout();
+
+		// Randomize order time
+		$orderId = $checkout->getCheckout()->getLastOrderId();
+
+		$order = Mage::getModel('sales/order')->load($orderId);
+		$order->setCreatedAt(self::get_random_date());
+
+		$order->save();
+	}
+
+	public static function get_random_date()
+	{
+		$start = 1337008866; # Mon, 14 May 2012 15:21:06 GMT
+		$end = strtotime(now());
+		$int = mt_rand($start, $end);
+		return date('Y-m-d H:i:s', $int);
 	}
 
 	public static function get_product_ids()
@@ -144,7 +160,7 @@ class Builder
 
 	public static function get_user_data()
 	{
-		$seed = md5(rand(0,getrandmax()));
+		$seed = md5(rand(0,50000)); // we want some overlap
 
 		Mage::log("Generating user for seed $seed");
 
@@ -158,7 +174,7 @@ class Builder
 		);
 
 		curl_setopt_array($ch, $options);
-		
+
 		$result = json_decode(curl_exec($ch));
 
 		Mage::log("Request complete");
